@@ -1,4 +1,3 @@
-CC = clang
 override CFLAGS += -g -pthread -lm
 
 all: build/ build/main-wait build/main-nowait
