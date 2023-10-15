@@ -18,3 +18,7 @@ Para rodar o **Item 2**:
 Para rodar o **Item 3**:
 
 `make item3`
+
+## Requisitos
+
+Qualquer compilador Java e C.
