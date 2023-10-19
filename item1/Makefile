@@ -19,3 +19,4 @@ build/main-nowait: main-nowait.c
 
 clean:
 	rm -f build/main-wait build/main-nowait
+	
