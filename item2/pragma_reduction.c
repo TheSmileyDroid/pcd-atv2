@@ -12,11 +12,13 @@
 #include <time.h>
 #include <unistd.h>
 
-#define ITERNUM 50
-#define N 50
+#define ITERNUM 10
+#define N 2048
 #define USEC 1000000
 #define SLEEP_TIME 0.001
-#define NUM_THREADS 1
+#define NUM_THREADS 4
+
+int totalCells = 0; // Variável global para armazenar o total de células vivas
 
 float getCell(float **grid, int i, int j) {
   return grid[(i + N) % N][(j + N) % N];
@@ -96,18 +98,29 @@ void iterate(float **grid, float **newgrid, int i, int j) {
 }
 
 int numberOfCells(float **grid) {
-  int cells = 0;
-  
-#pragma omp parallel for reduction(+:cells)
+  int totalCells = 0;
+
+  struct timeval start_time, end_time;
+
+  gettimeofday(&start_time, NULL);
+
+#pragma omp parallel for reduction(+ : totalCells)
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < N; j++) {
       if (grid[i][j] > 0.0f) {
-        cells++;
+        totalCells++;
       }
     }
   }
-  
-  return cells;
+
+  gettimeofday(&end_time, NULL);
+
+  long execution_time = (end_time.tv_sec - start_time.tv_sec) * 1000000 +
+                        (end_time.tv_usec - start_time.tv_usec);
+  printf("Total de Threads: %d \n", NUM_THREADS);
+  printf("Tempo gasto em numberOfCells: %ld microssegundos\n", execution_time);
+
+  return totalCells;
 }
 
 void clearStdout() { printf("\033[H\033[J"); }
@@ -172,9 +185,6 @@ int getResult(void (*addPatterns)(float **grid)) {
 
   omp_set_num_threads(NUM_THREADS);
 
-  struct timeval start, end;
-  gettimeofday(&start, NULL);
-
   for (int i = 0; i < ITERNUM; i++) {
 #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int i = 0; i < N; i++) {
@@ -183,26 +193,13 @@ int getResult(void (*addPatterns)(float **grid)) {
       }
     }
 
-    if (i < 6) {
-      printGrid(grid, 0, 50);
-    }
-    if (i % 100 == 0) {
-      printf("Iteração: %d\n", i);
-    }
     swap(&grid, &newgrid);
     // usleep(USEC * SLEEP_TIME);
   }
 
-  gettimeofday(&end, NULL);
-  printf("Tempo de execução: %ld microssegundos\n",
-         ((end.tv_sec * 1000000 + end.tv_usec) -
-          (start.tv_sec * 1000000 + start.tv_usec)));
-
-  // printGrid(grid, 2000);
-
   int cells = numberOfCells(grid);
 
-  printf("Número de Células: %d \n", cells);
+  printf("Número de Células: %d \n", totalCells);
 
   for (int i = 0; i < N; i++) {
     free(grid[i]);
@@ -211,7 +208,7 @@ int getResult(void (*addPatterns)(float **grid)) {
   free(grid);
   free(newgrid);
 
-  return cells;
+  return totalCells;
 }
 
 void testOne(float **grid) {
@@ -220,9 +217,10 @@ void testOne(float **grid) {
 }
 
 int main(int argc, char *argv[]) {
+
   int result1 = getResult(testOne);
 
-  printf("Número final de células: %d\n", result1);
+  printf("Número final de células: %d\n", totalCells); // Use a variável global
 
   return 0;
 }
